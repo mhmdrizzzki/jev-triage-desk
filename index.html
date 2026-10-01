@@ -20,6 +20,8 @@ textarea{width:100%;min-height:150px;background:#0b0f14;color:var(--tx);border:1
 button{border:0;border-radius:9px;padding:10px 16px;font-weight:600;cursor:pointer;font-size:14px}
 button:disabled{opacity:.45;cursor:not-allowed}
 #signin{background:var(--ok);color:#04120a}
+.meta span{white-space:nowrap}
+.empty{padding:14px 12px;border:1px dashed #2a3242;border-radius:10px;color:#5d6a80;font-size:12px;text-align:center}
 #run{background:var(--ac);color:#04121f}
 .ghost{background:transparent;color:var(--mut);border:1px solid var(--line)}
 .who{color:var(--mut);font-size:13px}
@@ -278,7 +280,7 @@ function render(list, answers) {
       '<div class="bar"><i style="width:' + r.pct.toFixed(0) + '%"></i></div>' +
       '<div class="meta"><span>urgency <strong>' + r.rung + '</strong> · ' + r.score.toFixed(2) + '</span>' + tag + '</div>' +
       '<div class="meta" style="margin-top:6px"><span>lane confidence ' + (r.laneConf != null ? Math.round(r.laneConf * 100) + '%' : '—') + '</span>' +
-      '<span>picked ' + (r.pct).toFixed(0) + '% of scale</span></div>';
+      '<span>scale ' + (r.pct).toFixed(0) + '%</span></div>';
     el.querySelector(".t").textContent = r.text;
     const host = r.lane ? cols[r.lane] : stray;
     host.appendChild(el);
@@ -286,7 +288,11 @@ function render(list, answers) {
 
   let strays = stray.querySelectorAll(".card").length;
   if (strays) board.appendChild(stray);
-  Object.keys(LANES).forEach(k => { cols[k].querySelector(".n").textContent = cols[k].querySelectorAll(".card").length; });
+  Object.keys(LANES).forEach(k => {
+    const n = cols[k].querySelectorAll(".card").length;
+    cols[k].querySelector(".n").textContent = n;
+    if (!n) { const e = document.createElement("div"); e.className = "empty"; e.textContent = "nothing here"; cols[k].appendChild(e); }
+  });
   stray.querySelector(".n").textContent = strays;
 }
 
