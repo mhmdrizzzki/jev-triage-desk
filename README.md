@@ -1,52 +1,46 @@
 # Jev Triage Desk
 
-Paste an inbox — one item per line. **[Jev](https://gen.pollinations.ai/docs)** decides, for every item:
+Paste an inbox — one item per line. **[Jev](https://gen.pollinations.ai/docs)** decides, for every item, three things, and the page code does nothing except act on those answers:
 
-| Decision | Question type | What the app does with it |
-|---|---|---|
-| Owning team | `choice` (`engineering` / `support` / `content` / `growth`) | Moves the card into that team's column |
-| Urgency | `score` (rungs `low → critical`) | Draws the urgency bar, sorts the board |
-| Page now? | `noul` | Adds a `PAGE NOW` badge above 50% |
+| Decision | Question type | What the code does with it |
+| --- | --- | --- |
+| Owning team | `choice` — engineering / support / content / growth | moves the card into that team's column |
+| Urgency | `score` — rungs `low → critical` | draws the urgency bar, sorts each column |
+| Page now? | `noul` | adds a `PAGE NOW` badge above 50% |
 
-The page code contains **no heuristics of its own** — it never guesses a team, never ranks text, never decides anything. It only lays out what Jev returned. One `POST /alpha/decisions` call carries every item, three questions each.
+![Jev Triage Desk board](docs/screenshot-board.png)
 
-## Run it
+## How the decisions are made
 
-Live: **https://mhmdrizzzki.github.io/jev-triage-desk/**
+One request carries the whole inbox:
 
-It is a single static `index.html`, no build step, no bundler, no server.
-
-## Sign-in
-
-The app uses **Bring Your Own Pollen** (OAuth authorization-code + PKCE, no client secret, browser-only).
-You sign in with Pollinations and the app receives a scoped `sk_...` key that **you** fund — the app never pays for your usage.
-
-- Authorize: `https://enter.pollinations.ai/authorize`
-- Token: `POST https://enter.pollinations.ai/api/oauth/token`
-- Decisions: `POST https://gen.pollinations.ai/alpha/decisions` with body `{ model: "jev", state, questions }`
-
-Request shape:
-
-```json
+```js
+POST https://gen.pollinations.ai/alpha/decisions
 {
   "model": "jev",
-  "state": { "task": "Triage this inbox", "inbox": ["..."], "urgency_scale": ["low","medium","high","critical"] },
+  "state": { "inbox": ["Payout failed...", "Typo on the pricing page..."], "user_goal": "Triage the inbox." },
   "questions": {
-    "i0_lane":     { "type": "choice", "instructions": "...", "criteria": { "support": "...", "engineering": "..." } },
-    "i0_priority": { "type": "score",  "instructions": "...", "criteria": ["low","medium","high","critical"] },
-    "i0_now":      { "type": "noul",   "instructions": "Should this page someone on call right now?" }
+    "i0_lane":     { "type": "choice", "instructions": "Inbox item #1: \"...\" Which team should own this item?", "criteria": { "engineering": "code, infra, deploys, bugs", ... } },
+    "i0_priority": { "type": "score",  "instructions": "...", "criteria": ["low", "medium", "high", "critical"] },
+    "i0_now":      { "type": "noul",   "instructions": "Should this page an on-call human right now?" }
   }
 }
 ```
 
-Note: `score` needs `criteria` as an **ordered array** of rungs (at least two).
+Every question quotes its own item, so Jev always knows which line it is judging. The response (`answers.i0_lane.choice`, `answers.i0_priority.score`, `answers.i0_now.noul`) is the only input to the render function — there is no heuristic in this repo that guesses a lane, ranks text, or invents a score.
 
-## Privacy
+![Raw decisions](docs/screenshot-raw.png)
 
-The inbox text you paste is sent only to Pollinations, with your own key. The app stores your token in `sessionStorage` and never in `localStorage`, a URL, or analytics. No backend, no logging.
+The full raw response is also visible inside the app, one click away, under "Raw decisions from Jev".
 
-## Credits
+## Bring Your Own Pollen
 
-Decisions by the `jev` decision model through [Pollinations](https://pollinations.ai).
+Sign-in is OAuth authorization-code + PKCE, entirely in the browser: no client secret, no backend, no shared key. You sign in, your own Pollen pays for your runs, and the app never holds a key of its own.
 
-MIT licensed.
+## Run locally
+
+```bash
+python3 -m http.server 8000     # then open http://localhost:8000
+```
+
+Decisions by Jev through [Pollinations](https://pollinations.ai).
