@@ -82,6 +82,13 @@ const DECIDE_URL = "https://gen.pollinations.ai/alpha/decisions";
 
 const LANES = { engineering:"Engineering", support:"Support", content:"Content", growth:"Growth" };
 const RUNGS = ["low","medium","high","critical"];
+// What each lane actually means. Jev reads these labels; the page only reads the keys.
+const LANE_CRITERIA = {
+  engineering: "code, infrastructure, deploys, bugs",
+  support: "billing, refunds, account access, upset customers",
+  content: "copy, docs, marketing wording, announcements",
+  growth: "partnerships, pricing experiments, new channels"
+};
 const SAMPLE = [
   "Payout for last week failed, customer has been waiting 3 days",
   "Typo on the pricing page: 'recieve'",
@@ -179,28 +186,30 @@ async function triage() {
 
   const questions = {};
   list.forEach((text, i) => {
+    // Every question quotes its own item, otherwise Jev cannot tell which line it is judging.
+    const quoted = "Inbox item #" + (i + 1) + ": \"" + text + "\"";
     questions["i" + i + "_lane"] = {
       type: "choice",
-      instructions: "Which team should own this inbox item?",
-      criteria: LANES
+      instructions: quoted + "\nWhich team should own this item?",
+      criteria: LANE_CRITERIA
     };
     questions["i" + i + "_priority"] = {
       type: "score",
-      instructions: "How urgently should this be picked up, compared with the other items in this inbox?",
+      instructions: quoted + "\nHow urgently must this be picked up? low = it can wait, critical = drop everything.",
       criteria: RUNGS
     };
     questions["i" + i + "_now"] = {
       type: "noul",
-      instructions: "Should this item page someone on call right now?",
+      instructions: quoted + "\nShould this page an on-call human right now?"
     };
   });
 
   const body = {
     model: "jev",
     state: {
-      task: "Triage this inbox: choose the owning team, the urgency rung, and whether it must page now.",
+      task: "You are triaging a shared inbox. Each question quotes the single item it is about.",
       inbox: list,
-      teams: LANES,
+      teams: LANE_CRITERIA,
       urgency_scale: RUNGS
     },
     questions: questions
